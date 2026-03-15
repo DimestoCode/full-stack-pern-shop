@@ -46,13 +46,16 @@ class UserController {
     return res.json({ token });
   }
 
-  async checkAuth(req, res, next) {
-    const { id } = req.query;
-    if (!id) {
-      return next(ErrorHandler.badRequest("User ID is required"));
+  async checkAuth(req, res) {
+    const { user } = req;
+
+    if (!user || !user.id || !user.role || !user.email) {
+      return next(ErrorHandler.badRequest("Required fields are missing"));
     }
 
-    res.json(id);
+    const token = generateJwt(req.user.id, req.user.email, req.user.role);
+
+    return res.json({ token });
   }
 }
 

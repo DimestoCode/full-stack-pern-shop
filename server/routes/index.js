@@ -5,5 +5,7 @@ router.use("/user", require("./userRouter"));
 router.use("/device", require("./deviceRouter"));
 router.use("/brand", require("./brandRouter"));
 router.use("/type", require("./typeRouter"));
+router.use("/rating", require("./ratingRouter"));
+router.use("/cart", require("./cartRouter"));
 
 module.exports = router;
