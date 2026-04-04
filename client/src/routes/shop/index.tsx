@@ -1,49 +1,61 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { z } from "zod"
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { BrandTypeFilters } from "#/components/BrandTypeFilters"
-import { ProductGrid } from "#/components/ProductGrid"
-import { PaginationBar } from "#/components/PaginationBar"
-import { devicesQueryOptions } from "#/lib/api/devices"
-import { brandsQueryOptions } from "#/lib/api/brands"
-import { typesQueryOptions } from "#/lib/api/deviceTypes"
+import {
+	keepPreviousData,
+	useQuery,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
+import { BrandTypeFilters } from "#/components/BrandTypeFilters";
+import { PaginationBar } from "#/components/PaginationBar";
+import { ProductGrid } from "#/components/ProductGrid";
+import { brandsQueryOptions } from "#/lib/api/brands";
+import { devicesQueryOptions } from "#/lib/api/devices";
+import { typesQueryOptions } from "#/lib/api/deviceTypes";
+import { cn } from "#/lib/utils";
 
-const LIMIT = 9
+const LIMIT = 9;
 
 const searchSchema = z.object({
 	typeId: z.number().optional(),
 	brandId: z.number().optional(),
 	page: z.number().optional().default(1),
-})
+});
 
 export const Route = createFileRoute("/shop/")({
 	validateSearch: searchSchema,
 	loader: ({ context }) => {
-		context.queryClient.ensureQueryData(brandsQueryOptions())
-		context.queryClient.ensureQueryData(typesQueryOptions())
-		context.queryClient.ensureQueryData(devicesQueryOptions({ limit: LIMIT, page: 1 }))
+		context.queryClient.ensureQueryData(brandsQueryOptions());
+		context.queryClient.ensureQueryData(typesQueryOptions());
+		context.queryClient.ensureQueryData(
+			devicesQueryOptions({ limit: LIMIT, page: 1 }),
+		);
 	},
 	component: ShopPage,
-})
+});
 
 function ShopPage() {
-	const { typeId, brandId, page = 1 } = Route.useSearch()
-	const navigate = Route.useNavigate()
+	const { typeId, brandId, page = 1 } = Route.useSearch();
+	const navigate = Route.useNavigate();
 
-	const { data: brands } = useSuspenseQuery(brandsQueryOptions())
-	const { data: types } = useSuspenseQuery(typesQueryOptions())
-	const { data: devices } = useSuspenseQuery(
-		devicesQueryOptions({ typeId, brandId, limit: LIMIT, page }),
-	)
+	const { data: brands } = useSuspenseQuery(brandsQueryOptions());
+	const { data: types } = useSuspenseQuery(typesQueryOptions());
+	const devicesQuery = useQuery({
+		...devicesQueryOptions({ typeId, brandId, limit: LIMIT, page }),
+		placeholderData: keepPreviousData,
+	});
 
-	const totalPages = Math.ceil(devices.count / LIMIT)
+	const devices = devicesQuery.data;
+	const devicesLoading = !devices && devicesQuery.isPending;
+	const staleDevices =
+		devicesQuery.isPlaceholderData && devicesQuery.isFetching;
+	const totalPages = devices ? Math.ceil(devices.count / LIMIT) : 0;
 
 	function setFilter(updates: { typeId?: number; brandId?: number }) {
-		navigate({ search: (prev) => ({ ...prev, ...updates, page: 1 }) })
+		navigate({ search: (prev) => ({ ...prev, ...updates, page: 1 }) });
 	}
 
 	function setPage(newPage: number) {
-		navigate({ search: (prev) => ({ ...prev, page: newPage }) })
+		navigate({ search: (prev) => ({ ...prev, page: newPage }) });
 	}
 
 	return (
@@ -59,14 +71,27 @@ function ShopPage() {
 					onBrandChange={(id) => setFilter({ brandId: id })}
 				/>
 				<div className="flex flex-1 flex-col gap-6">
-					<ProductGrid devices={devices.rows} />
-					<PaginationBar
-						page={page}
-						totalPages={totalPages}
-						onPageChange={setPage}
-					/>
+					<div
+						className={cn(
+							"transition-opacity duration-150",
+							staleDevices && "opacity-60",
+						)}
+					>
+						<ProductGrid
+							devices={devices?.rows ?? []}
+							isLoading={devicesLoading}
+						/>
+					</div>
+					{devices ? (
+						<PaginationBar
+							page={page}
+							totalPages={totalPages}
+							onPageChange={setPage}
+							disabled={staleDevices}
+						/>
+					) : null}
 				</div>
 			</div>
 		</main>
-	)
+	);
 }
