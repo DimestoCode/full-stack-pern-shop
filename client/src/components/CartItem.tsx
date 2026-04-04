@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Button } from "#/components/ui/button"
 import { Skeleton } from "#/components/ui/skeleton"
 import { deviceQueryOptions } from "#/lib/api/devices"
-import { env } from "#/env"
+import { deviceImageSrc } from "#/lib/deviceImage"
 
 interface CartItemProps {
 	deviceId: number
@@ -31,7 +31,7 @@ export function CartItem({ deviceId, onRemove, isRemoving }: CartItemProps) {
 	return (
 		<div className="flex items-center gap-4 py-4">
 			<img
-				src={`${env.VITE_STATIC_URL}/${device.img}`}
+				src={deviceImageSrc(device.img)}
 				alt={device.name}
 				className="bg-muted h-20 w-20 rounded-md object-contain p-1"
 			/>

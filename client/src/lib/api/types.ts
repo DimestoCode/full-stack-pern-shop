@@ -12,6 +12,7 @@ export interface Device {
 	name: string
 	price: number
 	rating: number
+	/** Filename on server static mount; full URL = VITE_STATIC_URL + '/' + img */
 	img: string
 	typeId: number
 	brandId: number

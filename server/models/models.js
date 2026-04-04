@@ -21,6 +21,7 @@ const Device = sequelize.define("device", {
   name: { type: DataTypes.STRING, unique: true, allowNull: false },
   price: { type: DataTypes.DECIMAL, allowNull: false },
   rating: { type: DataTypes.INTEGER, defaultValue: 0 },
+  /** Filename under server/static — public URL: {origin}/static/{img} */
   img: { type: DataTypes.STRING, allowNull: false },
 });
 

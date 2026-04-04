@@ -18,7 +18,7 @@ import { useAuth } from "#/hooks/useAuth"
 import { deviceQueryOptions } from "#/lib/api/devices"
 import { ratingQueryOptions, createRatingFn } from "#/lib/api/rating"
 import { addToCartFn } from "#/lib/api/cart"
-import { env } from "#/env"
+import { deviceImageSrc } from "#/lib/deviceImage"
 
 export const Route = createFileRoute("/shop/$deviceId")({
 	loader: ({ context, params }) => {
@@ -84,7 +84,7 @@ function DevicePage() {
 				{/* Image */}
 				<div className="bg-muted flex items-center justify-center rounded-xl p-8">
 					<img
-						src={`${env.VITE_STATIC_URL}/${device.img}`}
+						src={deviceImageSrc(device.img)}
 						alt={device.name}
 						className="max-h-80 w-full object-contain"
 					/>
