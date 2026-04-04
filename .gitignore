@@ -2,3 +2,5 @@ node_modules
 .qodo
 .DS_Store
 **/.DS_Store
+.pnpm-store
+dist
