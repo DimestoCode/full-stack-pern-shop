@@ -7,20 +7,22 @@ export interface DevicesParams {
 	typeId?: number
 	limit?: number
 	page?: number
+	search?: string
 }
 
 export const devicesQueryOptions = (params: DevicesParams = {}) => {
-	const { brandId, typeId, limit = 9, page = 1 } = params
-	const search = new URLSearchParams()
-	if (brandId) search.set("brandId", String(brandId))
-	if (typeId) search.set("typeId", String(typeId))
-	search.set("limit", String(limit))
-	search.set("page", String(page))
+	const { brandId, typeId, limit = 9, page = 1, search } = params
+	const qs = new URLSearchParams()
+	if (brandId) qs.set("brandId", String(brandId))
+	if (typeId) qs.set("typeId", String(typeId))
+	if (search) qs.set("search", search)
+	qs.set("limit", String(limit))
+	qs.set("page", String(page))
 
 	return queryOptions({
-		queryKey: ["devices", { brandId, typeId, limit, page }],
+		queryKey: ["devices", { brandId, typeId, limit, page, search }],
 		queryFn: () =>
-			apiFetch<DeviceListResponse>(`/device?${search.toString()}`),
+			apiFetch<DeviceListResponse>(`/device?${qs.toString()}`),
 	})
 }
 

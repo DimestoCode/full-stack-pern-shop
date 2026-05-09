@@ -42,11 +42,11 @@ export function ProductCard({ device }: ProductCardProps) {
   return (
     <Card className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md">
       <Link to="/shop/$deviceId" params={{ deviceId: String(device.id) }}>
-        <div className="bg-muted aspect-square overflow-hidden">
+        <div className="aspect-square overflow-hidden">
           <img
             src={imgUrl}
             alt={device.name}
-            className="h-full w-full object-cover p-4 transition-transform group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
         </div>
         <CardContent className="flex flex-col gap-1 p-4">

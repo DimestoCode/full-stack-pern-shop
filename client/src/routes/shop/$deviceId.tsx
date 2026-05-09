@@ -1,10 +1,25 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import { toast } from "sonner"
-import { ChevronRight, ShoppingCart } from "lucide-react"
-import { Button } from "#/components/ui/button"
-import { Badge } from "#/components/ui/badge"
-import { Separator } from "#/components/ui/separator"
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ChevronRight, ShoppingCart } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { StarRating } from "#/components/StarRating";
+import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "#/components/ui/card";
+import { Label } from "#/components/ui/label";
+import { Separator } from "#/components/ui/separator";
 import {
 	Table,
 	TableBody,
@@ -12,65 +27,124 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
-} from "#/components/ui/table"
-import { StarRating } from "#/components/StarRating"
-import { useAuth } from "#/hooks/useAuth"
-import { deviceQueryOptions } from "#/lib/api/devices"
-import { ratingQueryOptions, createRatingFn } from "#/lib/api/rating"
-import { addToCartFn } from "#/lib/api/cart"
-import { deviceImageSrc } from "#/lib/deviceImage"
+} from "#/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
+import { Textarea } from "#/components/ui/textarea";
+import { useAuth } from "#/hooks/useAuth";
+import { addToCartFn } from "#/lib/api/cart";
+import { deviceQueryOptions } from "#/lib/api/devices";
+import {
+	createReviewFn,
+	type DeviceReview,
+	deviceReviewsQueryOptions,
+} from "#/lib/api/review";
+import { deviceImageSrc } from "#/lib/deviceImage";
 
 export const Route = createFileRoute("/shop/$deviceId")({
 	loader: ({ context, params }) => {
-		context.queryClient.ensureQueryData(deviceQueryOptions(Number(params.deviceId)))
+		const id = Number(params.deviceId);
+		context.queryClient.ensureQueryData(deviceQueryOptions(id));
+		context.queryClient.ensureQueryData(deviceReviewsQueryOptions(id));
 	},
 	component: DevicePage,
-})
+});
+
+function formatReviewDate(iso?: string) {
+	if (!iso) return "";
+	try {
+		return new Date(iso).toLocaleDateString(undefined, {
+			year: "numeric",
+			month: "short",
+			day: "numeric",
+		});
+	} catch {
+		return "";
+	}
+}
+
+function reviewAuthor(r: DeviceReview) {
+	if (r.user?.email) {
+		const [local] = r.user.email.split("@");
+		return local || "Customer";
+	}
+	return `User #${r.userId}`;
+}
 
 function DevicePage() {
-	const { deviceId } = Route.useParams()
-	const { isAuthenticated, user } = useAuth()
-	const navigate = useNavigate()
-	const queryClient = useQueryClient()
+	const { deviceId } = Route.useParams();
+	const { isAuthenticated, user } = useAuth();
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+	const id = Number(deviceId);
 
-	const { data: device } = useSuspenseQuery(deviceQueryOptions(Number(deviceId)))
+	const { data: device } = useSuspenseQuery(deviceQueryOptions(id));
 
-	const { data: ratingData } = useQuery({
-		...ratingQueryOptions(Number(deviceId), isAuthenticated),
-	})
+	const { data: reviewsData } = useQuery({
+		...deviceReviewsQueryOptions(id),
+	});
+
+	const [draftRate, setDraftRate] = useState(5);
+	const [draftText, setDraftText] = useState("");
 
 	const addToCart = useMutation({
-		mutationFn: () => addToCartFn(user!.id, device.id),
+		mutationFn: async () => {
+			if (!user?.id) {
+				throw new Error("Not signed in");
+			}
+			return addToCartFn(user.id, device.id);
+		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["cart", user!.id] })
-			toast.success("Added to cart")
+			if (user?.id) {
+				queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
+			}
+			toast.success("Added to cart");
 		},
 		onError: () => toast.error("Failed to add to cart"),
-	})
+	});
 
-	const submitRating = useMutation({
-		mutationFn: (rate: number) => createRatingFn(device.id, rate),
+	const submitReview = useMutation({
+		mutationFn: () =>
+			createReviewFn(device.id, { rate: draftRate, review: draftText.trim() }),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["rating", device.id] })
-			queryClient.invalidateQueries({ queryKey: ["device", device.id] })
-			toast.success("Rating saved")
+			queryClient.invalidateQueries({ queryKey: ["reviews", device.id] });
+			setDraftText("");
+			toast.success("Review submitted");
 		},
-		onError: () => toast.error("Failed to save rating"),
-	})
+		onError: () => toast.error("Failed to submit review"),
+	});
 
 	function handleAddToCart() {
 		if (!isAuthenticated) {
-			navigate({ to: "/login" })
-			return
+			navigate({ to: "/login" });
+			return;
 		}
-		addToCart.mutate()
+		addToCart.mutate();
 	}
 
-	const averageRating = ratingData?.average ?? device.rating
+	function handleSubmitReview(e: React.FormEvent) {
+		e.preventDefault();
+		if (!isAuthenticated) {
+			navigate({ to: "/login" });
+			return;
+		}
+		if (!draftText.trim()) {
+			toast.error("Please write a short review");
+			return;
+		}
+		submitReview.mutate();
+	}
+
+	const averageRating =
+		reviewsData?.averageRating != null &&
+		Number.isFinite(reviewsData.averageRating)
+			? reviewsData.averageRating
+			: device.rating;
+
+	const reviews = reviewsData?.deviceReviews ?? [];
+	const hasSpecs = Boolean(device.info && device.info.length > 0);
 
 	return (
 		<main className="mx-auto w-full max-w-7xl px-4 py-8">
-			{/* Breadcrumb */}
 			<nav className="text-muted-foreground mb-6 flex items-center gap-1 text-sm">
 				<Link to="/shop" className="hover:text-foreground transition-colors">
 					Shop
@@ -79,22 +153,23 @@ function DevicePage() {
 				<span className="text-foreground">{device.name}</span>
 			</nav>
 
-			{/* Product layout */}
 			<div className="grid gap-8 lg:grid-cols-2">
-				{/* Image */}
-				<div className="bg-muted flex items-center justify-center rounded-xl p-8">
+				<div className="aspect-[4/3] overflow-hidden rounded-xl">
 					<img
 						src={deviceImageSrc(device.img)}
 						alt={device.name}
-						className="max-h-80 w-full object-contain"
+						className="h-full w-full object-cover"
 					/>
 				</div>
 
-				{/* Details */}
 				<div className="flex flex-col gap-4">
 					<div className="flex flex-wrap gap-2">
-						{device.typeId && <Badge variant="secondary">Type #{device.typeId}</Badge>}
-						{device.brandId && <Badge variant="outline">Brand #{device.brandId}</Badge>}
+						{device.typeId ? (
+							<Badge variant="secondary">Type #{device.typeId}</Badge>
+						) : null}
+						{device.brandId ? (
+							<Badge variant="outline">Brand #{device.brandId}</Badge>
+						) : null}
 					</div>
 
 					<h1 className="text-2xl font-bold">{device.name}</h1>
@@ -104,21 +179,13 @@ function DevicePage() {
 					</p>
 
 					<div className="flex flex-col gap-1">
-						<StarRating
-							value={averageRating}
-							onChange={isAuthenticated ? (rate) => submitRating.mutate(rate) : undefined}
-							readonly={!isAuthenticated}
-						/>
-						{isAuthenticated ? (
-							<p className="text-muted-foreground text-xs">Click to rate</p>
-						) : (
-							<p className="text-muted-foreground text-xs">
-								<Link to="/login" className="underline">
-									Log in
-								</Link>{" "}
-								to rate this product
-							</p>
-						)}
+						<StarRating value={averageRating} readonly />
+						<p className="text-muted-foreground text-xs">
+							Average from customer reviews
+							{reviews.length === 0
+								? " (no reviews yet — shown value is the catalog rating)"
+								: ""}
+						</p>
 					</div>
 
 					<Button
@@ -133,12 +200,20 @@ function DevicePage() {
 				</div>
 			</div>
 
-			{/* Specifications */}
-			{device.info && device.info.length > 0 && (
-				<>
-					<Separator className="my-8" />
-					<section>
-						<h2 className="mb-4 text-xl font-semibold">Specifications</h2>
+			<Separator className="my-8" />
+
+			<Tabs defaultValue="specifications" className="gap-6">
+				<TabsList variant="line" className="w-full max-w-md">
+					<TabsTrigger value="specifications" className="flex-1">
+						Specifications
+					</TabsTrigger>
+					<TabsTrigger value="reviews" className="flex-1">
+						Reviews
+					</TabsTrigger>
+				</TabsList>
+
+				<TabsContent value="specifications" className="mt-4">
+					{hasSpecs && device.info ? (
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -155,9 +230,94 @@ function DevicePage() {
 								))}
 							</TableBody>
 						</Table>
-					</section>
-				</>
-			)}
+					) : (
+						<p className="text-muted-foreground text-sm">
+							No specifications are listed for this product.
+						</p>
+					)}
+				</TabsContent>
+
+				<TabsContent value="reviews" className="mt-4 flex flex-col gap-8">
+					<div className="flex flex-col gap-3">
+						<h3 className="text-lg font-semibold">Customer reviews</h3>
+						{reviews.length === 0 ? (
+							<p className="text-muted-foreground text-sm">
+								No reviews yet. Be the first to share your experience.
+							</p>
+						) : (
+							<ul className="flex flex-col gap-3">
+								{reviews.map((r) => (
+									<li key={r.id}>
+										<Card>
+											<CardHeader className="pb-2">
+												<div className="flex flex-wrap items-center justify-between gap-2">
+													<CardTitle className="text-base">
+														{reviewAuthor(r)}
+													</CardTitle>
+													{formatReviewDate(r.createdAt) ? (
+														<CardDescription>
+															{formatReviewDate(r.createdAt)}
+														</CardDescription>
+													) : null}
+												</div>
+												<StarRating value={r.rate} readonly size={16} />
+											</CardHeader>
+											<CardContent className="pt-0">
+												<p className="text-sm leading-relaxed">{r.review}</p>
+											</CardContent>
+										</Card>
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
+
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-lg">Write a review</CardTitle>
+							<CardDescription>
+								{isAuthenticated
+									? "Share a rating and a few words about this product."
+									: "Log in to submit a review."}
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{isAuthenticated ? (
+								<form
+									onSubmit={handleSubmitReview}
+									className="flex flex-col gap-4"
+								>
+									<div className="flex flex-col gap-2">
+										<Label>Your rating</Label>
+										<StarRating value={draftRate} onChange={setDraftRate} />
+									</div>
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="device-review-text">Your review</Label>
+										<Textarea
+											id="device-review-text"
+											placeholder="What did you like or dislike?"
+											rows={4}
+											value={draftText}
+											onChange={(e) => setDraftText(e.target.value)}
+											disabled={submitReview.isPending}
+										/>
+									</div>
+									<Button
+										type="submit"
+										disabled={submitReview.isPending || !draftText.trim()}
+									>
+										{submitReview.isPending ? "Submitting…" : "Submit review"}
+									</Button>
+								</form>
+							) : (
+								<Button asChild variant="secondary">
+									<Link to="/login">Log in to review</Link>
+								</Button>
+							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
+			</Tabs>
 		</main>
-	)
+	);
 }
