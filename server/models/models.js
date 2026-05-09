@@ -35,9 +35,10 @@ const Brand = sequelize.define("brand", {
   name: { type: DataTypes.STRING, unique: true, allowNull: false },
 });
 
-const Rating = sequelize.define("rating", {
+const Review = sequelize.define("review", {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   rate: { type: DataTypes.INTEGER, allowNull: false },
+  review: { type: DataTypes.STRING, allowNull: false },
 });
 
 const DeviceInfo = sequelize.define("device_info", {
@@ -50,8 +51,8 @@ const TypeBrand = sequelize.define("type_brand", {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
 });
 
-User.hasMany(Rating);
-Rating.belongsTo(User);
+User.hasMany(Review);
+Review.belongsTo(User);
 
 User.hasOne(Cart);
 Cart.belongsTo(User);
@@ -68,8 +69,8 @@ Device.belongsTo(Type);
 Brand.hasMany(Device);
 Device.belongsTo(Brand);
 
-Device.hasMany(Rating);
-Rating.belongsTo(Device);
+Device.hasMany(Review);
+Review.belongsTo(Device);
 
 Device.hasMany(DeviceInfo, { as: "info" });
 DeviceInfo.belongsTo(Device);
@@ -84,7 +85,7 @@ module.exports = {
   Device,
   Type,
   Brand,
-  Rating,
+  Review,
   DeviceInfo,
   TypeBrand,
 };

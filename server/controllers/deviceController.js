@@ -3,11 +3,13 @@ const { Device, DeviceInfo } = require("../models/models");
 const ApiError = require("../error/errorHandler");
 const path = require("path");
 const uuid = require("uuid");
+const { Op } = require("sequelize");
 
 class DeviceController {
   async create(req, res, next) {
     try {
-      const { name, price, brandId, typeId, info } = req.body;
+      const { name, price, brandId, typeId } = req.body;
+      let { info } = req.body;
       const img = req.files?.img;
       if (!img) {
         return next(ApiError.badRequest("Image file is required"));
@@ -56,34 +58,38 @@ class DeviceController {
   }
 
   async getAll(req, res) {
-    let { brandId, typeId, limit = 9, page = 1 } = req.query;
+    let { brandId, typeId, limit = 9, page = 1, search } = req.query;
 
     let offset = page * limit - limit;
     let devices;
 
     const listOpts = { limit, offset };
+    const searchWhere = search ? { name: { [Op.iLike]: `%${search}%` } } : {};
 
     if (!brandId && !typeId) {
-      devices = await Device.findAndCountAll(listOpts);
+      devices = await Device.findAndCountAll({
+        ...listOpts,
+        where: { ...searchWhere },
+      });
     }
 
     if (brandId && !typeId) {
       devices = await Device.findAndCountAll({
         ...listOpts,
-        where: { brandId },
+        where: { brandId, ...searchWhere },
       });
     }
     if (typeId && !brandId) {
       devices = await Device.findAndCountAll({
         ...listOpts,
-        where: { typeId },
+        where: { typeId, ...searchWhere },
       });
     }
 
     if (brandId && typeId) {
       devices = await Device.findAndCountAll({
         ...listOpts,
-        where: { brandId, typeId },
+        where: { brandId, typeId, ...searchWhere },
       });
     }
 

@@ -23,7 +23,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
 const sequelize = require("../db");
 const {
 	CartDevice,
-	Rating,
+	Review,
 	DeviceInfo,
 	Device,
 	TypeBrand,
@@ -448,14 +448,14 @@ async function wipe() {
 	if (sequelize.getDialect() === "postgres") {
 		await sequelize.query(`
 			TRUNCATE TABLE
-				"cart_devices", "ratings", "device_infos", "devices",
+				"cart_devices", "reviews", "device_infos", "devices",
 				"type_brands", "carts", "users", "types", "brands"
 			RESTART IDENTITY CASCADE;
 		`);
 		return;
 	}
 	await CartDevice.destroy({ where: {}, force: true });
-	await Rating.destroy({ where: {}, force: true });
+	await Review.destroy({ where: {}, force: true });
 	await DeviceInfo.destroy({ where: {}, force: true });
 	await Device.destroy({ where: {}, force: true });
 	await TypeBrand.destroy({ where: {}, force: true });
@@ -554,11 +554,31 @@ async function main() {
 		{ cartId: shopperCart.id, deviceId: pick(7).id },
 	]);
 
-	await Rating.bulkCreate([
-		{ userId: shopper.id, deviceId: pick(1).id, rate: 5 },
-		{ userId: shopper.id, deviceId: pick(4).id, rate: 4 },
-		{ userId: admin.id, deviceId: pick(2).id, rate: 5 },
-		{ userId: admin.id, deviceId: pick(5).id, rate: 4 },
+	await Review.bulkCreate([
+		{
+			userId: shopper.id,
+			deviceId: pick(1).id,
+			rate: 5,
+			review: "Exceeded expectations — fast shipping and exactly as described.",
+		},
+		{
+			userId: shopper.id,
+			deviceId: pick(4).id,
+			rate: 4,
+			review: "Solid choice; battery life could be a bit better for heavy use.",
+		},
+		{
+			userId: admin.id,
+			deviceId: pick(2).id,
+			rate: 5,
+			review: "Great build quality. Would recommend for daily use.",
+		},
+		{
+			userId: admin.id,
+			deviceId: pick(5).id,
+			rate: 4,
+			review: "Good value. Minor software quirks but nothing serious.",
+		},
 	]);
 
 	console.log("Done.");
