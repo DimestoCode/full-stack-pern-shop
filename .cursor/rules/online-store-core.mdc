@@ -1,0 +1,12 @@
+---
+description: Monorepo layout, tooling, and global constraints for online-store
+alwaysApply: true
+---
+
+# Online store — core
+
+- **Layout:** `client/` — React 19 + Vite + TanStack Router/Query + Tailwind 4 + shadcn-style UI + Biome. `server/` — Express + Sequelize + PostgreSQL.
+- **Package manager:** `pnpm` only (no npm/yarn). Run **`pnpm check`** / **`pnpm exec tsc --noEmit`** from **`client/`**; use **`server/`** scripts for the API.
+- **Env:** Client API base URL and static URL live in **`client/src/env.ts`** (`VITE_*`). Server uses **`server/.env`** (do not commit secrets).
+- **Dependencies:** Do not read or cite `node_modules`, `dist`, or build output. Prefer project code and public docs.
+- **Docs:** Client conventions and API table: **`client/CLAUDE.md`**. Keep endpoint paths aligned with **`server/routes`**.

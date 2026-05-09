@@ -1,0 +1,13 @@
+---
+description: Express API, Sequelize models, and review routes
+globs: server/**/*.js
+alwaysApply: false
+---
+
+# Server — Express + Sequelize
+
+- **Entry:** `server/index.js` — mounts **`/api`** from **`server/routes/index.js`**.
+- **Models & associations:** `server/models/models.js` — single source of truth for **User, Device, Review, Cart,** etc. **Review** has **`rate`** (1–5) and **`review`** (text); **Device.rating** remains a catalog/list display field unless you explicitly sync it.
+- **Reviews:** `server/routes/reviewRouter.js` — **`GET /review/:deviceId`** (aggregate + list), **`POST /review/:deviceId`** (auth). Controller: **`server/controllers/reviewController.js`** — **`userId` from JWT (`req.user.id`)**, not the request body; validate **`rate`** and non-empty **`review`** text.
+- **Errors:** Use **`ErrorHandler`** from **`server/error/errorHandler.js`** and pass **`next`** in controllers that call **`next(ErrorHandler.badRequest(...))`**.
+- **Seed:** `server/scripts/seed.js` — truncates **`reviews`** and seeds **Review** rows with text; keep TRUNCATE list in sync with actual table names.

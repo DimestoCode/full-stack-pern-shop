@@ -1,0 +1,27 @@
+---
+description: Client React/TanStack patterns, API layer, shop and device pages
+globs: client/**
+alwaysApply: false
+---
+
+# Client — React and data
+
+## API layer
+
+- All HTTP calls go through **`apiFetch`** in **`client/src/lib/api/client.ts`** and **`queryOptions` / small `*Fn` helpers** under **`client/src/lib/api/`** (e.g. `devices.ts`, `review.ts`, `cart.ts`).
+- Types for responses live next to those modules or in **`client/src/lib/api/types.ts`**.
+
+## TanStack Query
+
+- Use **`useSuspenseQuery`** when the query key is stable for the route and you want the route to wait (e.g. single device, brands/types on shop).
+- For the **shop grid** (`client/src/routes/shop/index.tsx`), filtered **`devices`** queries use **`useQuery`** with **`placeholderData: keepPreviousData`** to avoid full-route Suspense flashes when search params change.
+- Prefetch in route **`loader`** with **`context.queryClient.ensureQueryData(...)`** where it improves first paint.
+
+## Reviews (not legacy rating)
+
+- Endpoints: **`GET /review/:deviceId`** (public), **`POST /review/:deviceId`** (auth). Client: **`client/src/lib/api/review.ts`**. Do not reintroduce **`/rating`**.
+- Device page: **`client/src/routes/shop/$deviceId.tsx`** — Tabs (**Specifications** | **Reviews**), review list + form (**rate** + **review** text). Hero stars are read-only; average from review API when available, else **`device.rating`**.
+
+## UI
+
+- Prefer **`pnpm dlx shadcn@latest add <component>`** for new primitives. Match existing **`client/src/components/ui/*`** patterns (tabs, cards, label, textarea, etc.).
